@@ -1,13 +1,13 @@
 "use client";
 
-import DashboardCard from "./components/DashboardCard";
+import DashboardCard from "../components/DashboardCard";
 
 export default function Test(){
    
     return (
-        <div className="flex flex-col">
+        <div className="flex">
             <div className="flex">
-                <h1> Dashboard </h1>
+                <h1> Dashboarsd </h1>
             </div>
             
 
