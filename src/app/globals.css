@@ -1,8 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: corporate --default;
+};
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant corporate (&:is(.corporate *));
 
 @theme inline {
   --color-background: var(--background);
