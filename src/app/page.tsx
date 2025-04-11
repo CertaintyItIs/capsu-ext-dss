@@ -1,6 +1,6 @@
 "use client";
 
-import DashboardCard from "./components/DashboardCard";
+import DashboardCard from "./components/dashboard/DashboardCard";
 
 export default function Test(){
    
