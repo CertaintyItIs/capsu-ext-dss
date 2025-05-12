@@ -1,15 +1,19 @@
-"use client";
 
-import DashboardCard from "../components/dashboard/DashboardCard";
-import NotificationButton from "../components/NotificationButton";
+import TestComponent from "./testcomponent";
+import { createClient } from '@/lib/supabase/server';
 
-export default function Test(){
-   
+export default async function Test(){
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    
     return (
         <div className="flex-col static">
             
             <div className="flex">
-                <h1> Dashboard </h1>
+                <TestComponent user={"e21a7a60-a893-44c7-9fb9-09bb71095f1c"}/>
             </div>
         </div>       
     );
