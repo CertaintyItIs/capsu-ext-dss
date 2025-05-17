@@ -135,7 +135,8 @@ export default function Test() {
             status={item.status}
             date={new Date(item.created_at).toLocaleDateString()}
             time={new Date(item.created_at).toLocaleTimeString()}
-            submitted_by={item.campus_name} // ✅ Campus name instead of campus_id
+            campus_id={item.campus_name} // ✅ Campus name instead of campus_id
+            submitted_by={item.submitted_by}
             form_id={item.id}
           />
         ))}

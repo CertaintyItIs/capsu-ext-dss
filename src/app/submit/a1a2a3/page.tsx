@@ -13,6 +13,9 @@ export default function Test() {
     { [key: string]: any } & { support_file_path?: string }
   >({});
   const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState("");
+  const [rateError, setRateError] = useState("");
+  const [timelinessError, setTimelinessError] = useState("");
 
   const data_items = [
     { key: "training", label: "Title of training conducted", type: "text" },
@@ -65,6 +68,10 @@ export default function Test() {
   async function submitForm() {
     try {
       setLoading(true);
+      if (error) {
+        alert("Please fix the validation errors before submitting.");
+        return;
+      }
 
       // Get current user
       const {
@@ -173,41 +180,83 @@ export default function Test() {
   }
 
   const handleChange = (key: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [key]: value };
+
+      const sumFields = (fields: string[]) =>
+        fields.reduce(
+          (sum, k) => sum + (parseInt(updated[k] || 0, 10) || 0),
+          0
+        );
+
+      const rateFields = ["5_rate", "4_rate", "3_rate", "2_rate", "1_rate"];
+      const timelinessFields = [
+        "5_timeliness",
+        "4_timeliness",
+        "3_timeliness",
+        "2_timeliness",
+        "1_timeliness",
+      ];
+
+      if (rateFields.includes(key) || key === "num_clients_rate") {
+        const rateSum = sumFields(rateFields);
+        const expected = parseInt(updated["num_clients_rate"] || 0, 10) || 0;
+        if (rateSum !== expected) {
+          setRateError(
+            "Sum of ratings must equal Number of clients who rate the training course as"
+          );
+        } else {
+          setRateError("");
+        }
+      }
+
+      if (timelinessFields.includes(key) || key === "num_clients_timeliness") {
+        const timeSum = sumFields(timelinessFields);
+        const expected =
+          parseInt(updated["num_clients_timeliness"] || 0, 10) || 0;
+        if (timeSum !== expected) {
+          setTimelinessError(
+            "Sum of timeliness ratings must equal Number of clients who rate the timeliness of service delivery as"
+          );
+        } else {
+          setTimelinessError("");
+        }
+      }
+
+      return updated;
+    });
   };
 
   useEffect(() => {
-    const sumRates = ["5_rate", "4_rate", "3_rate", "2_rate", "1_rate"]
-      .map((key) => parseInt(formData[key] || 0, 10))
-      .reduce((sum, val) => sum + (isNaN(val) ? 0 : val), 0);
+    const duration = parseInt(formData["duration"] || 0, 10);
+    const numPersonsTrained = parseInt(
+      formData["num_persons_trained"] || 0,
+      10
+    );
 
-    const sumTimeliness = [
-      "5_timeliness",
-      "4_timeliness",
-      "3_timeliness",
-      "2_timeliness",
-      "1_timeliness",
-    ]
-      .map((key) => parseInt(formData[key] || 0, 10))
-      .reduce((sum, val) => sum + (isNaN(val) ? 0 : val), 0);
+    let weight = 0;
+    if (duration === 1) {
+      weight = 1.0;
+    } else if (duration === 2) {
+      weight = 1.25;
+    } else if (duration === 3 || duration === 4) {
+      weight = 1.5;
+    } else if (duration >= 5) {
+      weight = 2.0;
+    }
 
-    setFormData((prev) => ({
+    const productWeight = isNaN(numPersonsTrained)
+      ? 0
+      : numPersonsTrained * weight;
+
+    setFormData((prev: any) => ({
       ...prev,
-      num_clients_rate: sumRates,
-      num_clients_timeliness: sumTimeliness,
+      num_clients_rate: numPersonsTrained,
+      num_clients_timeliness: numPersonsTrained,
+      num_trainees_surveyed: numPersonsTrained,
+      weight_persons_trained: productWeight,
     }));
-  }, [
-    formData["5_rate"],
-    formData["4_rate"],
-    formData["3_rate"],
-    formData["2_rate"],
-    formData["1_rate"],
-    formData["5_timeliness"],
-    formData["4_timeliness"],
-    formData["3_timeliness"],
-    formData["2_timeliness"],
-    formData["1_timeliness"],
-  ]);
+  }, [formData["num_persons_trained"], formData["duration"]]);
 
   useEffect(() => {
     if (formData.date_from && formData.date_to) {
@@ -262,6 +311,54 @@ export default function Test() {
             const renderField = () => {
               switch (item.type) {
                 case "text":
+                  const rateKeys = [
+                    "5_rate",
+                    "4_rate",
+                    "3_rate",
+                    "2_rate",
+                    "1_rate",
+                  ];
+                  const timelinessKeys = [
+                    "5_timeliness",
+                    "4_timeliness",
+                    "3_timeliness",
+                    "2_timeliness",
+                    "1_timeliness",
+                  ];
+
+                  const isRateGroup = rateKeys.includes(item.key);
+                  const isTimelinessGroup = timelinessKeys.includes(item.key);
+
+                  const isLastRate = item.key === "1_rate";
+                  const isLastTimeliness = item.key === "1_timeliness";
+
+                  return (
+                    <fieldset className="fieldset" key={item.key}>
+                      <legend className="fieldset-legend">{item.label}</legend>
+
+                      <input
+                        type={item.type}
+                        className="input input-neutral border"
+                        value={value}
+                        onChange={(e) => handleChange(item.key, e.target.value)}
+                        placeholder="Type here"
+                      />
+
+                      {/* Grouped error display */}
+                      {isLastRate && rateError && (
+                        <p className="text-red-500 text-sm font-semibold">
+                          {rateError}
+                        </p>
+                      )}
+
+                      {isLastTimeliness && timelinessError && (
+                        <p className="text-red-500 text-sm font-semibold">
+                          {timelinessError}
+                        </p>
+                      )}
+                    </fieldset>
+                  );
+
                 case "date":
                   return (
                     <fieldset className="fieldset" key={item.key}>
@@ -272,9 +369,7 @@ export default function Test() {
                         value={value}
                         onChange={(e) => handleChange(item.key, e.target.value)}
                         placeholder="Type here"
-                      
                       />
-                      
                     </fieldset>
                   );
                 case "long text":
@@ -300,7 +395,6 @@ export default function Test() {
                           const selectedFile = e.target.files?.[0] || null;
                           setFile(selectedFile);
                         }}
-                        
                       />
                     </fieldset>
                   );

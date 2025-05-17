@@ -47,7 +47,8 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <NavBar/>
-        <NotificationButton user={user}/>
+        {user ? <NotificationButton user={user} /> : null}
+        
         <div className="pl-28">
          {children}
         </div>

@@ -13,6 +13,7 @@ export default function VerifyCard({
   time,
   submitted_by,
   form_id,
+  campus_id,
 }: {
   form: string;
   status: string;
@@ -20,6 +21,7 @@ export default function VerifyCard({
   time: string;
   submitted_by: string;
   form_id: string;
+  campus_id: string;
 }) {
   const supabase = createClient();
   const [showModal, setShowModal] = useState(false);
@@ -69,7 +71,7 @@ export default function VerifyCard({
     const campusId = userDetails.campus_id;
 
     // Insert into tbl_activity_log
-    await supabase.from("tbl_activity_log").insert({
+    const {data: logData, error: logError} = await supabase.from("tbl_activity_log").insert({
       created_at: now,
       done_at: now,
       form_id: form_id,
@@ -78,26 +80,40 @@ export default function VerifyCard({
       done_by: currentUser,
     });
 
+    if (logError) {
+      console.error("Error inserting into tbl_activity_log:", logError);
+      return;
+    }
+
     // Update tbl_forms
-    await supabase
+    const {data: tblFormData, error: tblFormDataError} = await supabase
       .from("tbl_forms")
       .update({
-        status,
+        status: status,
         document_status: documentStatus,
         latest_change: now,
       })
       .eq("id", form_id);
 
+    if (tblFormDataError) {
+      console.error("Error updating tbl_forms:", tblFormDataError);
+      return;
+    }
+
     // Insert into tbl_notifications
-    await supabase.from("tbl_notifications").insert({
+
+    const {data: notifications_data, error: notificationError} = await supabase.from("tbl_notifications").insert({
       form_id: form_id,
-      status,
-      document_status: documentStatus,
+      status: status,
       notified_to: submitted_by,
       notified_by: currentUser,
       created_at: now,
-      
     });
+
+    if (notificationError) {
+      console.error("Error inserting into tbl_notifications:", notificationError);
+      return;
+    }
 
     setShowModal(false);
     redirect("/verify");
@@ -169,7 +185,7 @@ export default function VerifyCard({
         </span>
         <p className="text-sm font-semibold">{date}</p>
         <p className="text-sm font-semibold">{time}</p>
-        <p className="text-sm">{submitted_by}</p>
+        <p className="text-sm">{campus_id}</p>
         <p className="text-sm">{form_id}</p>
       </div>
 
