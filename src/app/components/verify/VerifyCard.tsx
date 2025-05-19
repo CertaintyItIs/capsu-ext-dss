@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import A1A2A3Form from "./A1A2A3/Form";
-import { create } from "domain";
-import { redirect } from 'next/navigation'
+import { redirect } from "next/navigation";
 
 export default function VerifyCard({
   form,
@@ -27,9 +26,25 @@ export default function VerifyCard({
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [approvalStatus, setApprovalStatus] = useState<"approve" | "reject" | "">("");
+  const [approvalStatus, setApprovalStatus] = useState<
+    "approve" | "reject" | ""
+  >("");
   const [currentForm, setCurrentForm] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
+  useEffect(() => {
+    let isMounted = true;
+    getCurrentUserDetails()
+      .then((details) => {
+        if (isMounted) setUserRole(details.role);
+      })
+      .catch(() => {
+        if (isMounted) setUserRole(null);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function getCurrentUserDetails() {
     const {
@@ -71,14 +86,16 @@ export default function VerifyCard({
     const campusId = userDetails.campus_id;
 
     // Insert into tbl_activity_log
-    const {data: logData, error: logError} = await supabase.from("tbl_activity_log").insert({
-      created_at: now,
-      done_at: now,
-      form_id: form_id,
-      action: `${status} by Approver`,
-      document_status: documentStatus,
-      done_by: currentUser,
-    });
+    const { data: logData, error: logError } = await supabase
+      .from("tbl_activity_log")
+      .insert({
+        created_at: now,
+        done_at: now,
+        form_id: form_id,
+        action: `${status} by Approver`,
+        document_status: documentStatus,
+        done_by: currentUser,
+      });
 
     if (logError) {
       console.error("Error inserting into tbl_activity_log:", logError);
@@ -86,7 +103,7 @@ export default function VerifyCard({
     }
 
     // Update tbl_forms
-    const {data: tblFormData, error: tblFormDataError} = await supabase
+    const { data: tblFormData, error: tblFormDataError } = await supabase
       .from("tbl_forms")
       .update({
         status: status,
@@ -102,16 +119,21 @@ export default function VerifyCard({
 
     // Insert into tbl_notifications
 
-    const {data: notifications_data, error: notificationError} = await supabase.from("tbl_notifications").insert({
-      form_id: form_id,
-      status: status,
-      notified_to: submitted_by,
-      notified_by: currentUser,
-      created_at: now,
-    });
+    const { data: notifications_data, error: notificationError } =
+      await supabase.from("tbl_notifications").insert({
+        form_id: form_id,
+        status: status,
+        notified_to: submitted_by,
+        notified_by: currentUser,
+        created_at: now,
+        read_by_user: "unread",
+      });
 
     if (notificationError) {
-      console.error("Error inserting into tbl_notifications:", notificationError);
+      console.error(
+        "Error inserting into tbl_notifications:",
+        notificationError
+      );
       return;
     }
 
@@ -125,18 +147,15 @@ export default function VerifyCard({
       let tableName = "";
 
       if (form === "A1 A2 A3") {
-
         const { data: data } = await supabase
           .from("A1.a_tbl_training_activities")
           .select("*")
           .eq("id", form_id);
-        
-        
 
-      setFormData(data?.[0]);
-      setShowModal(true);
-      setLoading(false);
-      return;
+        setFormData(data?.[0]);
+        setShowModal(true);
+        setLoading(false);
+        return;
       } else {
         tableName = form.toLowerCase(); // fallback to form name
       }
@@ -193,40 +212,46 @@ export default function VerifyCard({
       {showModal && (
         <dialog className="modal modal-open">
           <div className="modal-box max-w-2xl">
-            
-          <div className="sticky top-0 z-10 bg-white pb-2 mb-2 border-b border-gray-200">
-      <h3 className="font-bold text-lg">Form {form} Details</h3>
+            <div className="sticky top-0 z-10 bg-white pb-2 mb-2 border-b border-gray-200">
+              <h3 className="font-bold text-lg">Form {form} Details</h3>
 
-      <div className="flex items-center gap-4 mt-2">
-        <div className="flex items-center gap-2">
-          
-          <input
-            type="radio"
-            name="approval_status"
-            value="approve"
-            id="approve"
-            className="radio radio-success border"
-            onChange={() => setApprovalStatus("approve")}
-          />
+              {userRole === "Admin" && (
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="approval_status"
+                      value="approve"
+                      id="approve"
+                      className="radio radio-success border"
+                      onChange={() => setApprovalStatus("approve")}
+                    />
+                    <label htmlFor="approve" className="font-medium">
+                      Approve
+                    </label>
 
-          <label htmlFor="approve" className="font-medium">Approve</label>
+                    <input
+                      type="radio"
+                      name="approval_status"
+                      value="reject"
+                      id="reject"
+                      className="radio radio-error ml-4 border"
+                      onChange={() => setApprovalStatus("reject")}
+                    />
+                    <label htmlFor="reject" className="font-medium">
+                      Reject
+                    </label>
+                  </div>
 
-          <input
-            type="radio"
-            name="approval_status"
-            value="reject"
-            id="reject"
-            className="radio radio-error ml-4 border"
-            onChange={() => setApprovalStatus("reject")}
-          />
-          <label htmlFor="reject" className="font-medium">Reject</label>
-        </div>
-
-        <button onClick={handleConfirm} className="btn btn-primary ml-auto">
-          Confirm
-        </button>
-      </div>
-    </div>
+                  <button
+                    onClick={handleConfirm}
+                    className="btn btn-primary ml-auto"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              )}
+            </div>
 
             {loading ? (
               <p>Loading...</p>
@@ -234,7 +259,7 @@ export default function VerifyCard({
               <div className="py-4">
                 {form === "A1 A2 A3" ? (
                   <>
-                      <A1A2A3Form form_id={form_id} />
+                    <A1A2A3Form form_id={form_id} />
                   </>
                 ) : (
                   <pre className="bg-gray-100 p-2 rounded">
