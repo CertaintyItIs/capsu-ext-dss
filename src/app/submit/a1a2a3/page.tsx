@@ -4,10 +4,12 @@ import Heading from "@/app/components/typography/Heading";
 import Subheading from "@/app/components/typography/Subheading";
 import { createClient } from "@/lib/supabase/client";
 import { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
+
 
 export default function Test() {
   const supabase = createClient();
-
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<
     { [key: string]: any } & { support_file_path?: string }
@@ -161,6 +163,7 @@ export default function Test() {
         notified_to: admin.id,
         notified_by: user.id,
         form_id: formId,
+        read_by_user: "unread",
       }));
 
       const { error: notifError } = await supabase
@@ -169,6 +172,7 @@ export default function Test() {
       if (notifError) throw notifError;
 
       alert("Form submitted successfully!");
+      router.push('/verify');
     } catch (error) {
       console.error(error);
       const user = await supabase.auth.getUser();
